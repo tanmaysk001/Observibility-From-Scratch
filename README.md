@@ -1,149 +1,77 @@
-# AI Observability
+# Company AI Governance System
 
-Full-stack AI observability app with:
-- FastAPI backend (`app/`)
-- React + Vite dashboard (`dashboard/`)
-- SQLite by default (`ai_logs.db`)
+FastAPI backend and React dashboard for **authenticated, role-scoped, cost-tracked** LLM usage: identity, role-based access control, and domain separation.
 
-# Full Explaination of the Project
-- [Article 1](https://medium.com/@sayedebad.777/building-an-ai-observability-system-from-scratch-fastapi-openai-react-part-1-87421b664859)
-- [Article 2](https://medium.com/@sayedebad.777/building-an-ai-observability-system-from-scratch-fastapi-openai-react-part-2-2f325db57177)
+## Architecture
 
-## Features
-
-- Register and login with role-based users (`admin`, `employee`)
-- Send prompts to an LLM
-- Track request cost and latency
-- View request logs
-  - `admin`: sees all logs
-  - `employee`: sees only their own logs
-
-## Project Structure
-
-```text
+```
 app/
- ├── api/
- │    ├── admin_routes.py
- │    ├── auth_routes.py
- │    ├── employee_routes.py
- │    ├── __init__.py
- ├── core/
- │    ├── dependencies.py
- │    ├── security.py
- │    ├── __init__.py
- ├── models/
- │    ├── llm_log.py
- │    ├── user.py
- │    ├── __init__.py
- ├── services/
- │    ├── auth_service.py
- │    ├── llm_service.py
- │    ├── logging_service.py
- │    ├── __init__.py
- ├── config.py
- ├── database.py
- ├── main.py
- ├── schemas.py
+ ├── api/          HTTP boundary (auth / employee / admin routers)
+ ├── core/         Security primitives + JWT dependencies
+ ├── models/       SQLAlchemy persistent entities (User, LLMLog)
+ ├── services/     Business logic (auth, llm, logging)
+ ├── config.py     Env-driven configuration
+ ├── database.py   Engine, session factory, declarative base
+ ├── schemas.py    Pydantic request/response shapes
+ └── main.py       FastAPI app + router registration
+frontend/          Vite + React dashboard (login, prompt, charts)
 ```
 
-## Prerequisites
+Request flow: **Route → Service → Model**. Routes coordinate, services execute, models persist; the core layer centralizes security.
 
-- Python 3.11+
-- Node.js 18+ (or latest LTS)
-- npm
-- OpenAI API key
+## Backend Setup
 
-## 1) Backend Setup
+Requires Python 3.10+.
 
-From project root:
-
-```powershell
+```bash
 python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install --upgrade pip
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # macOS/Linux
+
 pip install -r requirements.txt
-pip install "python-jose[cryptography]" "passlib[bcrypt]"
+copy .env.example .env         # fill in OPENAI_API_KEY + SECRET_KEY
+
+uvicorn app.main:app --reload
 ```
 
-Create/update `.env` in project root:
+API: `http://127.0.0.1:8000` — interactive docs at `/docs`.
 
-```env
-DATABASE_URL=sqlite:///./ai_logs.db
-OPENAI_API_KEY=your_openai_api_key_here
-SECRET_KEY=your_secret_key_here
-```
+### Endpoints
 
-Run backend:
+| Method | Path                | Auth        | Purpose                         |
+|--------|---------------------|-------------|---------------------------------|
+| POST   | `/auth/register`    | public      | Create user (`admin`/`employee`) |
+| POST   | `/auth/login`       | public      | Exchange credentials for JWT    |
+| POST   | `/employee/generate`| Bearer JWT  | Call LLM, log request           |
+| GET    | `/admin/logs`       | Bearer JWT  | List logs (admin = all, employee = own) |
 
-```powershell
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-```
+## Frontend Setup
 
-Backend URL: `http://127.0.0.1:8000`
+Requires Node.js 18+.
 
-## 2) Frontend Setup
-
-In a new terminal:
-
-```powershell
-cd dashboard
+```bash
+cd frontend
 npm install
 npm run dev
 ```
 
-Dashboard URL (usually): `http://127.0.0.1:5173`
+Dashboard: `http://localhost:5173` — configure the app to use the API at `http://127.0.0.1:8000`.
 
-## 3) First-Time Usage
+## Quick test
 
-1. Open the dashboard.
-2. Register a user using API (Swagger/Postman/curl), then login in UI.
-3. Submit prompts from the dashboard.
+1. Register an admin:
 
-Open Swagger docs:
-- `http://127.0.0.1:8000/docs`
+   ```bash
+   curl -X POST http://127.0.0.1:8000/auth/register ^
+     -H "Content-Type: application/json" ^
+     -d "{\"name\":\"Root\",\"email\":\"admin@acme.com\",\"password\":\"pw\",\"role\":\"admin\"}"
+   ```
 
-Useful endpoints:
-- `POST /auth/register`
-- `POST /auth/login`
-- `POST /employee/generate` (Bearer token required)
-- `GET /admin/logs` (Bearer token required)
+2. Log in in the UI, send a prompt, and confirm cost/latency charts update.
 
-Example register payload:
+## Implementation notes
 
-```json
-{
-  "name": "Admin User",
-  "email": "admin@example.com",
-  "password": "admin123",
-  "role": "admin"
-}
-```
-
-Employee payload is the same with `"role": "employee"`.
-
-## Run with Docker (backend only)
-
-From project root:
-
-```powershell
-docker build -t ai-observability .
-docker run --rm -p 8000:8000 --env-file .env ai-observability
-```
-
-## Troubleshooting
-
-- `403 Not authorized` on generate/logs:
-  - Login again to refresh token.
-  - Ensure role is `admin` or `employee`.
-- `401 Invalid token`:
-  - Token missing/expired, login again.
-- OpenAI errors:
-  - Check `OPENAI_API_KEY` in `.env`.
-- Missing module errors (`jose`, `passlib`):
-  - Install extra packages:
-    - `pip install "python-jose[cryptography]" "passlib[bcrypt]"`
-
-## Notes
-
-- CORS is currently open (`allow_origins=["*"]`) for local development.
-- Default DB is SQLite file `ai_logs.db`.
+- JWT tokens are stateless and include `sub` (email), `role`, and `exp`.
+- `app/core/dependencies.py` decodes JWTs for protected routes.
+- `app/core/security.py` exposes DB-backed `get_current_user` when full user verification is required.
+- Cost is derived from token counts via `PRICE_PER_1K_INPUT` / `PRICE_PER_1K_OUTPUT` in `services/llm_service.py` — adjust to match your pricing.
