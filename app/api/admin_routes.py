@@ -6,14 +6,12 @@ from app.core.dependencies import get_current_user
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
-
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
-
 
 @router.get("/logs")
 def get_all_logs(

@@ -27,16 +27,20 @@ function App() {
   const login = async () => {
     try {
       setError("");
-      const res = await axios.post(`${API}/auth/login`, {
-        email: email,
-        password: password,
-      });
+      const res = await axios.post(
+        `${API}/auth/login`,
+        {
+          email: email,
+          password: password,
+        }
+      );
 
       setToken(res.data.access_token);
     } catch (err) {
       setError(err?.response?.data?.detail || "Login failed");
     }
   };
+
 
   const fetchLogs = async () => {
     if (!token) return;
@@ -90,16 +94,14 @@ function App() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <br />
-          <br />
+          <br /><br />
           <input
             placeholder="Password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <br />
-          <br />
+          <br /><br />
           <button onClick={login}>Login</button>
           <hr />
         </>
@@ -117,8 +119,7 @@ function App() {
             <option value="gpt-4o">gpt-4o</option>
           </select>
 
-          <br />
-          <br />
+          <br /><br />
 
           <textarea
             placeholder="Enter prompt..."
@@ -128,8 +129,7 @@ function App() {
             cols="50"
           />
 
-          <br />
-          <br />
+          <br /><br />
 
           <button onClick={handleSubmit}>Generate</button>
 
@@ -139,6 +139,7 @@ function App() {
               <p>{response.response}</p>
               <p>Cost: ${response.cost}</p>
               <p>Latency: {response.latency}s</p>
+              <p>Drift: {response.drift_score}</p>
             </div>
           )}
 
@@ -184,7 +185,9 @@ function App() {
                   <td>{log.user_id}</td>
                   <td>${log.cost}</td>
                   <td>{log.latency}s</td>
-                  <td>{new Date(log.created_at).toLocaleTimeString()}</td>
+                  <td>
+                    {new Date(log.created_at).toLocaleTimeString()}
+                  </td>
                 </tr>
               ))}
             </tbody>

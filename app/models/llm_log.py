@@ -2,7 +2,6 @@ from sqlalchemy import Column, Integer, String, Float, Text, DateTime, JSON
 from datetime import datetime
 from app.database import Base
 
-
 class LLMLog(Base):
     __tablename__ = "llm_logs"
 

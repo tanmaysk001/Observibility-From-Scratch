@@ -25,7 +25,7 @@ def register_user(db: Session, name: str, email: str, password: str, role: str):
         name=name,
         email=email,
         hashed_password=hashed_pw,
-        role=normalized_role,
+        role=normalized_role
     )
 
     db.add(new_user)

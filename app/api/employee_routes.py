@@ -8,14 +8,12 @@ from app.schemas import LLMRequest
 
 router = APIRouter(prefix="/employee", tags=["Employee"])
 
-
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
-
 
 @router.post("/generate")
 def generate(
@@ -44,5 +42,5 @@ def generate(
     return {
         "response": output,
         "cost": cost,
-        "latency": latency,
+        "latency": latency
     }

@@ -1,17 +1,8 @@
 from app.models.llm_log import LLMLog
 
+def log_request(db, user_email, model_name, prompt, response,
+                tokens_input, tokens_output, cost, latency):
 
-def log_request(
-    db,
-    user_email,
-    model_name,
-    prompt,
-    response,
-    tokens_input,
-    tokens_output,
-    cost,
-    latency,
-):
     log = LLMLog(
         user_id=user_email,
         model_name=model_name,
@@ -20,7 +11,7 @@ def log_request(
         tokens_input=tokens_input,
         tokens_output=tokens_output,
         cost=cost,
-        latency=latency,
+        latency=latency
     )
 
     db.add(log)
